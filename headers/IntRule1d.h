@@ -21,7 +21,12 @@
 */
 class IntRule1d : public IntRule
 {
+
+void IntRule1d::SetOrder(int order) {
     
+}
+
+
 public:
   
     // Default Constructor of integration rule 1D

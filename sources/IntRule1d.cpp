@@ -20,14 +20,35 @@ IntRule1d::IntRule1d(){
 }
 
 IntRule1d::IntRule1d(int order) : IntRule(order) {
-    DebugStop();
+    SetOrder(order);
 }
+static int ComputingSymmetricCubatureRule(int order, MatrixDouble &Points, VecDouble &Weights);
 
 void IntRule1d::SetOrder(int order) {
     fOrder = order;
-    DebugStop();
+   if (order < 0 || order > MaxOrder()) {
+        DebugStop();
+    }
+     
+     int npoints;
+     npoints=(2*(order))-1; 
+     
+     if(order==0){
+       npoints=1;
+     }
+
+    fPoints.resize(npoints,1); //coordenadas dos pontos de integração
+    fWeights.resize(npoints); //A0 e A1
+
+    VecDouble coordAux(npoints); //vecdouble é um vetor de números reais (linha,coluna)
+    gauleg(-1,1,coordAux,fWeights);
+
+    for (int i=0; i<npoints;i++){
+        fPoints(i,0)=coordAux[i];
+    }
 }
 
+//co = coordenada ; w = peso (A0, A1 ...) ; x1 e x2 são os qsi's -1 e 1;
 void IntRule1d::gauleg(const double x1, const double x2, VecDouble &co, VecDouble &w){
     int n = w.size();
 

@@ -16,8 +16,6 @@ using namespace std;
 
 IntRule::IntRule() : fPoints(), fWeights(){
         fOrder = 0;
-
-
 }
 
 IntRule::IntRule(int order) {
@@ -68,6 +66,6 @@ void IntRule::Point(int p, VecDouble& co, double& w) const {
 
     for (int i = 0; i < dim; i++) {
         co[i] = fPoints(p, i);
-    }
+        }
     w = fWeights[p];
 }

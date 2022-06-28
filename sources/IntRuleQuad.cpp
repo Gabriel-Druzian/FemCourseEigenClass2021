@@ -14,11 +14,34 @@ IntRuleQuad::IntRuleQuad(){
 }
 
 IntRuleQuad::IntRuleQuad(int order) {
-    DebugStop();
+    SetOrder(order);
 }
 
 void IntRuleQuad::SetOrder(int order) {
-    DebugStop();
+    fOrder = order;
+
+    if (order < 0 || order > MaxOrder()) {
+        DebugStop();
+    }
+
+    int nPoints = 2*order-1;
+    if (order == 0) {
+        nPoints = 1;
+    }
+    fPoints.resize(nPoints*nPoints,2);
+    fWeights.resize(nPoints);//is resized in GaulegQuad
+    
+    VecDouble coordAux(nPoints);
+    gaulegQuad(-1,1,coordAux,fWeights);
+
+    for (int i = 0; i < nPoints; i++)
+    {
+        for (int j = 0; j < nPoints; j++)
+        {
+            fPoints(i*nPoints+j,0) = coordAux[i];
+            fPoints(j+i*nPoints,1) = coordAux[j+nPoints];
+        }
+    }
 }
 
 void IntRuleQuad::gaulegQuad(const double x1, const double x2, VecDouble &co, VecDouble &w) {

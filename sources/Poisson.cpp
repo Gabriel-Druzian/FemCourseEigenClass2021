@@ -95,21 +95,26 @@ void Poisson::ContributeError(IntPointData &data, VecDouble &u_exact, MatrixDoub
 
     double diff = 0.0;
     for (int i = 0; i < this->NState(); i++) {
-        diff = (u[i] - u_exact[i]);
+        diff = (u[i] - u_exact[i]); //L2
         errors[0] += diff*diff;
+        // std::cout << "U =" << u << std::endl;
+        // std::cout << "u_exact =" << u_exact << std::endl;
     }
-
+        // std::cout << "x =" << data.x << std::endl; 
     errors[1] = 0.;
     int dim = this->Dimension();
     int nstate = this->NState();
     for (int i = 0; i < dim; i++) {
         for (int j = 0; j < nstate; j++) {
+            // std::cout << "GradU =" << gradu << std::endl;
+            // std::cout << "du_exact =" << du_exact << std::endl;
             diff = (gradu(i, j) - du_exact(i, j));
             errors[1] += diff*diff;
+            
         }
 
     }
-    errors[2] = errors[0] + errors[1];
+    errors[2] = errors[0] + errors[1]; //energia
 }
 
 void Poisson::Contribute(IntPointData &data, double weight, MatrixDouble &EK, MatrixDouble &EF) const {
@@ -133,18 +138,46 @@ void Poisson::Contribute(IntPointData &data, double weight, MatrixDouble &EK, Ma
         force(data.x, resloc);
         res = resloc[0];
     }
+    /* Opção 1
+    EK += (dphi.transpose() * dphi + phi.transpose()) * weight;
+    */
 
+    //como puxar o nShape?
+
+    int nshape = phi.rows();
+
+    // for (int i = 0; i < nshape; i++){
+    //     for (int j=0; j < nshape; j++){
+    //         //Matriz de rigidez:
+    //         EK(i,j) += (dphi(1,i) * dphi(1,j) + dphi(0,i) * dphi(0,j) + phi(i,0) * phi(j,0))*weight ;
+    //         }   
+        //Vetor de força:
+        //EF (i,0) += data.x[0] * phi(1) * weight;
+    //     EF (i,0) += res * phi(i,0) * weight; 
+    // }
+        // EK += (dphi.transpose() * dphi + phi * phi.transpose()) * weight;
+        EK += (dphi.transpose() * dphi) * weight;
+        EF += res * phi * weight;
+    // std::cout << "x: " << data.x << std::endl;
+    // std::cout << "phi: " << phi << std::endl;
+    // std::cout << "dphi: " << dphi << std::endl;
+    // std::cout << "EK: " << EK << std::endl;
+    // std::cout << "Peso: " << weight << std::endl;
+    // std::cout << "EF: " << EF << std::endl;
+        
+    /*
     //+++++++++++++++++
     // Please implement me
     std::cout << "\nPLEASE IMPLEMENT ME\n" << __PRETTY_FUNCTION__ << std::endl;
     DebugStop();
     //+++++++++++++++++
+    */
 }
 
 void Poisson::PostProcessSolution(const IntPointData &data, const int var, VecDouble &Solout) const {
     MatrixDouble gradudx, flux;
     gradudx = data.axes.transpose()*data.dsoldx;
-    flux = -permeability*gradudx;
+    flux = -permeability*gradudx; //sigma = -k*DeltaU
     
     int nstate = this->NState();
     if(nstate != 1) DebugStop();

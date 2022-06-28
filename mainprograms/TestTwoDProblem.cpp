@@ -29,7 +29,7 @@ int main ()
 {
     GeoMesh gmesh;
     ReadGmsh read;
-    std::string filename("quads.msh");
+    std::string filename("../twoD64.msh");
 #ifdef MACOSX
     filename = "../"+filename;
 #endif
@@ -42,34 +42,53 @@ int main ()
     perm(1,1) = 1.;
     perm(2,2) = 1.;
     Poisson *mat1 = new Poisson(1,perm);
-    mat1->SetDimension(2);
+    mat1->SetDimension(1);
 
     auto force = [](const VecDouble &x, VecDouble &res)
     {
-        res[0] = 2.*(1.-x[0])*x[0]+2.*(1-x[1])*x[1];
+        // res[0] = 2.(1.-x[0])*x[0]+2.(1-x[1])*x[1]; // 1ª ordem
+        res[0] = ((x[0] * x[0] * (-x[1] * x[1] + x[1] + 2) + x[0] * (x[1] * x[1] - x[1] - 2) + 2 * (x[1] - 1) * x[1])* sin(x[1]) + 2 * (x[0] - 1) * x[0] * (2 * x[1] - 1) * cos(x[1]))*(-1); //2ª ordem
+        
+    //    res[0] = 0;
     };
+
+    auto exact = [](const VecDouble &x, VecDouble &val, MatrixDouble &deriv)
+    {
+        val[0] = (1. - x[0]) * x[0] * (1 - x[1]) * x[1] * sin(x[1]); 
+        deriv(0,0) = sin(x[1]) * ( (x[1])*(1-x[1]) - 2.*x[0]*x[1]*(1.-x[1]) );
+        deriv(1,0) = x[0] * sin(x[1]) * (1-2*x[1]) + x[0]*x[1]*cos(x[1]) * (1-x[1]) - x[0]*x[0]*sin(x[1]) * (1-2*x[1]) - x[0]*x[0]*x[1]*cos(x[1]) * (1-x[1]); 
+    };
+
     mat1->SetForceFunction(force);
     MatrixDouble proj(1,1),val1(1,1),val2(1,1);
     proj.setZero();
     val1.setZero();
     val2.setZero();
     L2Projection *bc_linha = new L2Projection(0,2,proj,val1,val2);
-    L2Projection *bc_point = new L2Projection(0,3,proj,val1,val2);
-    std::vector<MathStatement *> mathvec = {0,mat1,bc_point,bc_linha};
+    bc_linha->SetExactSolution(exact); //adicionei
+    mat1->SetExactSolution(exact); //adicionei
+    L2Projection *bc_point = new L2Projection(0,2,proj,val1,val2); // (0-Dirichlet ou 1-Neumann, ID)
+    
+    // val2(0,0) = 800.;
+    // L2Projection *hot = new L2Projection(0,2,proj,val1,val2);
+    
+    // val2(0,0) = 20.;
+    // L2Projection *cold = new L2Projection(0,3,proj,val1,val2);
+    
+    // val2(0,0) = 0.;
+    // L2Projection *adiab = new L2Projection(1,4,proj,val1,val2);
+    
+    std::vector<MathStatement *> mathvec = {0,mat1, bc_linha, bc_point};
+    // std::vector<MathStatement *> mathvec = {0,mat1,hot,cold,adiab};
     cmesh.SetMathVec(mathvec);
-    cmesh.SetDefaultOrder(1);
+    cmesh.SetDefaultOrder(2);
     cmesh.AutoBuild();
     cmesh.Resequence();
 
-        Analysis locAnalysis(&cmesh);
+    Analysis locAnalysis(&cmesh);
     locAnalysis.RunSimulation();
     PostProcessTemplate<Poisson> postprocess;
-    auto exact = [](const VecDouble &x, VecDouble &val, MatrixDouble &deriv)
-    {
-        val[0] = (1.-x[0])*x[0]*(1-x[1])*x[1];
-        deriv(0,0) = (1.-2.*x[0])*(1-x[1])*x[1];
-        deriv(1,0) = (1-2.*x[1])*(1-x[0])*x[0];
-    };
+    
 
 //    if (!strcmp("Sol", name.c_str())) return ESol;
 //    if (!strcmp("DSol", name.c_str())) return EDSol;
@@ -85,7 +104,7 @@ int main ()
     postprocess.AppendVariable("DSolExact");
     postprocess.SetExact(exact);
     mat1->SetExactSolution(exact);
-    locAnalysis.PostProcessSolution("quads.vtk", postprocess);
+    locAnalysis.PostProcessSolution("bloco.vtk", postprocess);
 
     VecDouble errvec;
     errvec = locAnalysis.PostProcessError(std::cout, postprocess);
